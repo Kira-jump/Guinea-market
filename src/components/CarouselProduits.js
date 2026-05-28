@@ -5,7 +5,6 @@ export default function CarouselProduits({ produits }) {
   const navigate = useNavigate()
   const trackRef = useRef(null)
 
-  // On duplique les produits pour un défilement infini
   const items = [...produits, ...produits, ...produits]
 
   useEffect(() => {
@@ -14,14 +13,12 @@ export default function CarouselProduits({ produits }) {
 
     let animationId
     let position = 0
-    const speed = 0.5 // pixels par frame — ultra fluide
+    const speed = 0.5
 
     const animate = () => {
       position += speed
       const singleWidth = track.scrollWidth / 3
-      if (position >= singleWidth) {
-        position = 0
-      }
+      if (position >= singleWidth) position = 0
       track.style.transform = `translateX(-${position}px)`
       animationId = requestAnimationFrame(animate)
     }
@@ -33,19 +30,20 @@ export default function CarouselProduits({ produits }) {
   if (produits.length === 0) return null
 
   return (
-    <div className="w-full overflow-hidden bg-white py-4 border-b border-gray-100">
+    <div className="w-full overflow-hidden bg-navy-900/60 py-5 border-y border-gold-500/10">
       <div
         ref={trackRef}
-        className="flex gap-3 will-change-transform"
+        className="flex gap-4 will-change-transform"
         style={{ width: 'max-content' }}
       >
         {items.map((produit, index) => (
           <div
             key={`${produit.id}-${index}`}
             onClick={() => navigate(`/boutique/${produit.boutiques?.id}`)}
-            className="flex-shrink-0 w-32 sm:w-40 cursor-pointer group"
+            className="flex-shrink-0 w-36 sm:w-44 cursor-pointer group"
           >
-            <div className="relative overflow-hidden rounded-xl bg-gray-50 shadow-sm border border-gray-100 group-hover:border-green-300 group-hover:shadow-md transition-all duration-200"
+            <div
+              className="relative overflow-hidden rounded-2xl bg-navy-800 border border-navy-700 group-hover:border-gold-500/50 group-hover:shadow-gold-glow transition-all duration-300"
               style={{ paddingBottom: '100%' }}
             >
               <div className="absolute inset-0">
@@ -53,22 +51,21 @@ export default function CarouselProduits({ produits }) {
                   <img
                     src={produit.image_url}
                     alt={produit.nom}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-200">
-                    <span className="text-3xl">📦</span>
+                  <div className="w-full h-full flex items-center justify-center text-navy-600">
+                    <span className="text-4xl">📦</span>
                   </div>
                 )}
               </div>
-              {/* Prix overlay */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                <p className="text-white text-xs font-bold">
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-navy-950/95 via-navy-950/40 to-transparent p-2.5">
+                <p className="text-gold-300 font-display text-sm font-semibold tracking-wide">
                   {produit.prix.toLocaleString()} GNF
                 </p>
               </div>
             </div>
-            <p className="text-xs text-gray-600 mt-1 line-clamp-1 font-medium px-1">
+            <p className="text-xs text-navy-100/70 mt-2 line-clamp-1 px-1 font-sans">
               {produit.nom}
             </p>
           </div>

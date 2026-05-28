@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import CarteProduit from '../components/CarteProduit'
 import Avis from '../components/Avis'
+import PartageBoutique from '../components/PartageBoutique'
 
 export default function Boutique() {
   const [boutique, setBoutique] = useState(null)
@@ -11,62 +12,50 @@ export default function Boutique() {
   const [suivi, setSuivi] = useState(false)
   const [loading, setLoading] = useState(true)
   const [onglet, setOnglet] = useState('produits')
+  const [partageOuvert, setPartageOuvert] = useState(false)
   const { id } = useParams()
   const { user } = useAuth()
   const navigate = useNavigate()
+
+  const fetchBoutique = useCallback(async () => {
+    const { data } = await supabase.from('boutiques').select('*').eq('id', id).single()
+    setBoutique(data)
+    setLoading(false)
+    if (data) {
+      await supabase.from('vues').insert({ boutique_id: id, visiteur_id: user?.id || null })
+    }
+  }, [id, user])
+
+  const fetchProduits = useCallback(async () => {
+    const { data } = await supabase
+      .from('produits').select('*').eq('boutique_id', id)
+      .order('created_at', { ascending: false })
+    setProduits(data || [])
+  }, [id])
+
+  const verifierSuivi = useCallback(async () => {
+    if (!user) return
+    const { data } = await supabase
+      .from('follows').select('id')
+      .eq('acheteur_id', user.id).eq('boutique_id', id)
+      .maybeSingle()
+    setSuivi(!!data)
+  }, [user, id])
 
   useEffect(() => {
     fetchBoutique()
     fetchProduits()
     if (user) verifierSuivi()
-  }, [id, user])
-
-  const fetchBoutique = async () => {
-    const { data } = await supabase
-      .from('boutiques')
-      .select('*')
-      .eq('id', id)
-      .single()
-    setBoutique(data)
-    setLoading(false)
-    if (data) {
-      await supabase.from('vues').insert({
-        boutique_id: id,
-        visiteur_id: user?.id || null
-      })
-    }
-  }
-
-  const fetchProduits = async () => {
-    const { data } = await supabase
-      .from('produits')
-      .select('*')
-      .eq('boutique_id', id)
-      .order('created_at', { ascending: false })
-    setProduits(data || [])
-  }
-
-  const verifierSuivi = async () => {
-    const { data } = await supabase
-      .from('follows')
-      .select('id')
-      .eq('acheteur_id', user.id)
-      .eq('boutique_id', id)
-      .maybeSingle()
-    setSuivi(!!data)
-  }
+  }, [user, fetchBoutique, fetchProduits, verifierSuivi])
 
   const toggleSuivi = async () => {
     if (!user) { navigate('/connexion'); return }
     if (suivi) {
       await supabase.from('follows')
-        .delete()
-        .eq('acheteur_id', user.id)
-        .eq('boutique_id', id)
+        .delete().eq('acheteur_id', user.id).eq('boutique_id', id)
       setBoutique({ ...boutique, followers_count: boutique.followers_count - 1 })
     } else {
-      await supabase.from('follows')
-        .insert({ acheteur_id: user.id, boutique_id: id })
+      await supabase.from('follows').insert({ acheteur_id: user.id, boutique_id: id })
       setBoutique({ ...boutique, followers_count: boutique.followers_count + 1 })
       await supabase.from('notifications').insert({
         user_id: boutique.vendeur_id,
@@ -86,74 +75,89 @@ export default function Boutique() {
   const estProprietaire = user && boutique && user.id === boutique.vendeur_id
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center text-gray-400">
-      <p>Chargement...</p>
+    <div className="min-h-screen flex items-center justify-center text-navy-200/60 font-display italic">
+      Chargement…
     </div>
   )
 
   if (!boutique) return (
-    <div className="min-h-screen flex items-center justify-center text-gray-400">
-      <p>Boutique introuvable</p>
+    <div className="min-h-screen flex items-center justify-center text-navy-200/60 font-display italic">
+      Boutique introuvable
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-green-50 flex items-center justify-center overflow-hidden border-2 border-green-200 flex-shrink-0">
+    <div className="min-h-screen bg-navy-950">
+      {/* Hero boutique */}
+      <div className="relative overflow-hidden border-b border-gold-500/15">
+        <div className="absolute inset-0 bg-radial-fade pointer-events-none" />
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gold-500/10 blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-5xl mx-auto px-4 py-10 sm:py-12">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-navy-800 flex items-center justify-center overflow-hidden border-2 border-gold-500/50 shadow-gold-glow flex-shrink-0">
               {boutique.logo_url ? (
                 <img src={boutique.logo_url} alt={boutique.nom} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-gray-400 text-sm">Logo</span>
+                <span className="text-navy-200/50 text-xs font-sans">Logo</span>
               )}
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{boutique.nom}</h1>
-              <p className="text-gray-500 text-sm mt-1">{boutique.description}</p>
-              <p className="text-gray-400 text-xs mt-2">
-                {boutique.followers_count} followers • {produits.length} produits
+              <p className="font-sans text-[10px] tracking-[0.4em] uppercase text-gold-400/80 mb-2">
+                · Maison ·
+              </p>
+              <h1 className="font-display text-4xl sm:text-5xl text-gold-shine">{boutique.nom}</h1>
+              <p className="text-navy-200/70 text-sm sm:text-base mt-3 font-sans leading-relaxed">{boutique.description}</p>
+              <p className="font-sans text-xs tracking-wider uppercase text-navy-200/50 mt-3">
+                {boutique.followers_count} followers · {produits.length} produits
               </p>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+          <div className="flex flex-col sm:flex-row gap-3 mt-8">
             <a
               href={`https://wa.me/${boutique.whatsapp}`}
               target="_blank"
               rel="noreferrer"
-              className="flex-1 bg-green-500 text-white py-3 rounded-xl font-semibold text-center hover:bg-green-600 transition text-sm"
+              className="btn-emerald flex-1 py-3 rounded-full font-sans tracking-wide text-center text-sm"
             >
               Contacter sur WhatsApp
             </a>
             {!estProprietaire && (
               <button
                 onClick={toggleSuivi}
-                className={`px-6 py-3 rounded-xl font-semibold text-sm transition ${
-                  suivi ? 'bg-gray-100 text-gray-600' : 'bg-green-600 text-white hover:bg-green-700'
+                className={`px-7 py-3 rounded-full font-sans tracking-wide text-sm transition ${
+                  suivi
+                    ? 'bg-navy-800 border border-navy-600 text-navy-100/80 hover:bg-navy-700'
+                    : 'btn-gold'
                 }`}
               >
                 {suivi ? 'Suivi' : '+ Suivre'}
               </button>
             )}
             {estProprietaire && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
-                  onClick={() => navigate('/creer-boutique')}
-                  className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
+                  onClick={() => setPartageOuvert(true)}
+                  className="btn-gold flex-1 px-5 py-3 rounded-full font-sans text-sm"
                 >
-                  Modifier
+                  📤 Partager
                 </button>
                 <button
                   onClick={() => navigate(`/ajouter-produit/${boutique.id}`)}
-                  className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm bg-orange-500 text-white hover:bg-orange-600 transition"
+                  className="flex-1 px-5 py-3 rounded-full font-sans text-sm bg-emerald-600 text-white hover:bg-emerald-500 transition"
                 >
                   + Produit
                 </button>
                 <button
+                  onClick={() => navigate('/creer-boutique')}
+                  className="flex-1 px-5 py-3 rounded-full font-sans text-sm bg-navy-800 border border-navy-600 text-navy-100/80 hover:bg-navy-700 transition"
+                >
+                  Modifier
+                </button>
+                <button
                   onClick={() => navigate('/dashboard')}
-                  className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm bg-blue-500 text-white hover:bg-blue-600 transition"
+                  className="flex-1 px-5 py-3 rounded-full font-sans text-sm bg-navy-800 border border-navy-600 text-navy-100/80 hover:bg-navy-700 transition"
                 >
                   Dashboard
                 </button>
@@ -163,20 +167,21 @@ export default function Boutique() {
         </div>
       </div>
 
-      <div className="bg-white shadow-sm sticky top-0 z-10 mt-1">
+      {/* Onglets */}
+      <div className="glass-navy border-b border-gold-500/10 sticky top-[73px] z-30">
         <div className="max-w-6xl mx-auto px-4 flex">
           <button
             onClick={() => setOnglet('produits')}
-            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-all ${
-              onglet === 'produits' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-400'
+            className={`flex-1 py-4 text-sm font-sans tracking-wider uppercase border-b-2 transition-all ${
+              onglet === 'produits' ? 'border-gold-500 text-gold-300' : 'border-transparent text-navy-200/60 hover:text-navy-100'
             }`}
           >
             Produits ({produits.length})
           </button>
           <button
             onClick={() => setOnglet('avis')}
-            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-all ${
-              onglet === 'avis' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-400'
+            className={`flex-1 py-4 text-sm font-sans tracking-wider uppercase border-b-2 transition-all ${
+              onglet === 'avis' ? 'border-gold-500 text-gold-300' : 'border-transparent text-navy-200/60 hover:text-navy-100'
             }`}
           >
             Avis
@@ -184,14 +189,14 @@ export default function Boutique() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-10">
         {onglet === 'produits' && (
           produits.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">
-              <p>Aucun produit pour l'instant</p>
+            <div className="text-center py-20 text-navy-200/60 font-display italic text-lg">
+              Aucun produit pour l'instant
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
               {produits.map(produit => (
                 <CarteProduit
                   key={produit.id}
@@ -207,6 +212,10 @@ export default function Boutique() {
         )}
         {onglet === 'avis' && <Avis boutiqueId={id} vendeurId={boutique.vendeur_id} />}
       </div>
+
+      {partageOuvert && (
+        <PartageBoutique boutique={boutique} onClose={() => setPartageOuvert(false)} />
+      )}
     </div>
   )
 }

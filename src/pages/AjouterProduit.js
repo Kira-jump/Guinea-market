@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useParams, useNavigate } from 'react-router-dom'
 import { CATEGORIES } from '../lib/categories'
+import { notifierFollowers, TYPES_NOTIF } from '../lib/notifications'
 
 export default function AjouterProduit() {
   const [nom, setNom] = useState('')
@@ -40,8 +41,7 @@ export default function AjouterProduit() {
       const ext = image.name.split('.').pop()
       const fileName = `produits/${boutiqueId}-${Date.now()}.${ext}`
       const { error: uploadError } = await supabase.storage
-        .from('images')
-        .upload(fileName, image)
+        .from('images').upload(fileName, image)
 
       if (uploadError) {
         setErreur(`Erreur upload: ${uploadError.message}`)
@@ -49,108 +49,109 @@ export default function AjouterProduit() {
         return
       }
 
-      const { data: urlData } = supabase.storage
-        .from('images')
-        .getPublicUrl(fileName)
+      const { data: urlData } = supabase.storage.from('images').getPublicUrl(fileName)
       image_url = urlData.publicUrl
     }
 
     const { error } = await supabase.from('produits').insert({
-      boutique_id: boutiqueId,
-      nom,
-      description,
-      prix: parseFloat(prix),
-      image_url,
-      categorie,
+      boutique_id: boutiqueId, nom, description,
+      prix: parseFloat(prix), image_url, categorie,
     })
 
     if (error) {
       setErreur(`Erreur: ${error.message}`)
     } else {
       setSucces(true)
-      setNom('')
-      setDescription('')
-      setPrix('')
-      setCategorie('')
-      setImage(null)
-      setPreview(null)
+      // Notifier tous les followers de la boutique
+      try {
+        const { data: bt } = await supabase.from('boutiques').select('nom').eq('id', boutiqueId).single()
+        await notifierFollowers(
+          boutiqueId,
+          `📦 Nouveau produit chez ${bt?.nom || 'une boutique que tu suis'} : ${nom}`,
+          `/boutique/${boutiqueId}`,
+          TYPES_NOTIF.PRODUIT,
+        )
+      } catch (notifErr) { /* silencieux */ }
+      setNom(''); setDescription(''); setPrix(''); setCategorie('')
+      setImage(null); setPreview(null)
     }
 
     setLoading(false)
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4">
-      <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-lg p-6 sm:p-8">
-        <h1 className="text-xl sm:text-2xl font-bold text-green-600 mb-1">
+    <div className="min-h-screen bg-navy-950 py-10 px-4">
+      <div className="max-w-lg mx-auto glass-navy border border-gold-500/20 rounded-3xl p-7 sm:p-9 shadow-card-dark">
+        <p className="font-sans text-[10px] tracking-[0.4em] uppercase text-gold-400/80 mb-2 text-center">
+          · Nouveau produit ·
+        </p>
+        <h1 className="font-display text-3xl sm:text-4xl text-gold-shine mb-1 text-center">
           Ajouter un produit
         </h1>
-        <p className="text-gray-500 text-sm mb-6">Ajoute un produit à ta boutique</p>
+        <p className="text-navy-200/70 font-display italic text-sm mb-7 text-center">
+          Enrichis ta boutique d'une pièce d'exception
+        </p>
 
         {erreur && (
-          <p className="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm">{erreur}</p>
+          <p className="bg-red-900/30 border border-red-500/30 text-red-300 p-3 rounded-lg mb-4 text-sm">{erreur}</p>
         )}
         {succes && (
-          <div className="bg-green-100 text-green-600 p-3 rounded-lg mb-4 text-sm flex justify-between items-center">
-            <span>Produit ajouté avec succès !</span>
+          <div className="bg-emerald-900/30 border border-emerald-500/30 text-emerald-300 p-3 rounded-lg mb-4 text-sm flex justify-between items-center">
+            <span>✓ Produit ajouté !</span>
             <button
               onClick={() => navigate(`/boutique/${boutiqueId}`)}
-              className="underline text-green-700 font-medium"
+              className="underline text-gold-300 font-sans"
             >
               Voir la boutique
             </button>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Image */}
           <div className="flex flex-col items-center gap-3">
-            <div className="w-full h-44 sm:h-52 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-200">
+            <div className="w-full h-48 sm:h-56 rounded-2xl bg-navy-900 flex items-center justify-center overflow-hidden border-2 border-dashed border-gold-500/30">
               {preview ? (
-                <img src={preview} alt="produit" className="w-full h-full object-cover rounded-xl" />
+                <img src={preview} alt="produit" className="w-full h-full object-cover rounded-2xl" />
               ) : (
-                <div className="text-center text-gray-400">
-                  <p className="text-sm">Photo du produit</p>
-                </div>
+                <div className="text-center text-navy-200/50 font-display italic">Photo du produit</div>
               )}
             </div>
-            <label className="cursor-pointer bg-green-50 text-green-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition">
+            <label className="cursor-pointer bg-navy-800 border border-gold-500/30 text-gold-300 px-5 py-2 rounded-full text-sm font-sans hover:bg-navy-700 hover:border-gold-500/60 transition">
               Choisir une photo
               <input type="file" accept="image/*" onChange={handleImage} className="hidden" />
             </label>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nom du produit</label>
+            <label className="block text-xs tracking-wider uppercase text-navy-200/70 mb-2 font-sans">Nom du produit</label>
             <input
               type="text"
               value={nom}
               onChange={(e) => setNom(e.target.value)}
               placeholder="Ex: Robe wax taille M"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm sm:text-base"
+              className="input-dark w-full rounded-lg px-4 py-3 font-sans text-sm"
               required
             />
           </div>
 
           {/* Catégorie */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type de produit
-            </label>
+            <label className="block text-xs tracking-wider uppercase text-navy-200/70 mb-2 font-sans">Type de produit</label>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {CATEGORIES.filter(c => c.id !== 'tout').map(cat => (
                 <button
                   key={cat.id}
                   type="button"
                   onClick={() => setCategorie(cat.id)}
-                  className={`p-2 rounded-xl border-2 text-center transition-all text-xs relative ${
+                  className={`p-2.5 rounded-xl border-2 text-center transition-all text-xs relative font-sans ${
                     categorie === cat.id
-                      ? 'border-green-500 bg-green-50 text-green-700 font-semibold'
-                      : 'border-gray-200 text-gray-500 hover:border-green-200'
+                      ? 'border-gold-500 bg-gold-500/10 text-gold-200'
+                      : 'border-navy-700 text-navy-200/70 hover:border-navy-500'
                   }`}
                 >
                   {categorie === cat.id && (
-                    <span className="absolute top-1 right-1 text-green-500 text-xs">✓</span>
+                    <span className="absolute top-1 right-1 text-gold-400 text-xs">✓</span>
                   )}
                   {cat.label}
                 </button>
@@ -159,24 +160,24 @@ export default function AjouterProduit() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-xs tracking-wider uppercase text-navy-200/70 mb-2 font-sans">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Décris ton produit..."
+              placeholder="Décris ton produit…"
               rows={2}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm sm:text-base"
+              className="input-dark w-full rounded-lg px-4 py-3 font-sans text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Prix (GNF)</label>
+            <label className="block text-xs tracking-wider uppercase text-navy-200/70 mb-2 font-sans">Prix (GNF)</label>
             <input
               type="number"
               value={prix}
               onChange={(e) => setPrix(e.target.value)}
               placeholder="Ex: 150000"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm sm:text-base"
+              className="input-dark w-full rounded-lg px-4 py-3 font-sans text-sm"
               required
             />
           </div>
@@ -184,15 +185,15 @@ export default function AjouterProduit() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition disabled:opacity-50 text-sm sm:text-base"
+            className="btn-gold w-full py-3 rounded-full text-sm tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Ajout en cours...' : '+ Ajouter le produit'}
+            {loading ? 'Ajout en cours…' : '+ Ajouter le produit'}
           </button>
         </form>
 
         <button
           onClick={() => navigate(`/boutique/${boutiqueId}`)}
-          className="w-full mt-3 bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold hover:bg-gray-200 transition text-sm sm:text-base"
+          className="w-full mt-3 bg-navy-800 border border-navy-700 text-navy-200/80 py-3 rounded-full font-sans hover:bg-navy-700 transition text-sm"
         >
           Voir ma boutique
         </button>

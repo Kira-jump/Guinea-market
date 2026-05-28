@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -7,20 +7,15 @@ export default function CarteBoutique({ boutique, userId }) {
   const [followersCount, setFollowersCount] = useState(0)
   const navigate = useNavigate()
 
-  useEffect(() => {
-    fetchFollowers()
-    if (userId) verifierSuivi()
-  }, [userId, boutique.id])
-
-  const fetchFollowers = async () => {
+  const fetchFollowers = useCallback(async () => {
     const { count } = await supabase
       .from('follows')
       .select('*', { count: 'exact', head: true })
       .eq('boutique_id', boutique.id)
     setFollowersCount(count || 0)
-  }
+  }, [boutique.id])
 
-  const verifierSuivi = async () => {
+  const verifierSuivi = useCallback(async () => {
     const { data } = await supabase
       .from('follows')
       .select('id')
@@ -28,7 +23,12 @@ export default function CarteBoutique({ boutique, userId }) {
       .eq('boutique_id', boutique.id)
       .maybeSingle()
     setSuivi(!!data)
-  }
+  }, [userId, boutique.id])
+
+  useEffect(() => {
+    fetchFollowers()
+    if (userId) verifierSuivi()
+  }, [userId, fetchFollowers, verifierSuivi])
 
   const toggleSuivi = async (e) => {
     e.stopPropagation()
@@ -52,32 +52,31 @@ export default function CarteBoutique({ boutique, userId }) {
   return (
     <div
       onClick={() => navigate(`/boutique/${boutique.id}`)}
-      className="bg-white rounded-2xl shadow hover:shadow-md transition cursor-pointer overflow-hidden border border-gray-100 hover:border-green-200 hover:-translate-y-1 duration-200"
+      className="group bg-navy-800/50 rounded-2xl border border-navy-700 hover:border-gold-500/40 hover:shadow-card-dark transition-all cursor-pointer overflow-hidden duration-300"
     >
-      <div className="h-36 sm:h-40 bg-green-50 flex items-center justify-center overflow-hidden">
+      <div className="h-40 sm:h-44 bg-navy-900 overflow-hidden relative">
         {boutique.logo_url ? (
-          <img src={boutique.logo_url} alt={boutique.nom} className="h-full w-full object-cover" />
+          <img src={boutique.logo_url} alt={boutique.nom} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
-          <div className="w-full h-full bg-green-100 flex items-center justify-center">
-            <span className="text-gray-400 text-sm">Logo</span>
-          </div>
+          <div className="w-full h-full flex items-center justify-center text-navy-600 text-4xl">🏪</div>
         )}
+        <div className="absolute inset-0 bg-gradient-to-t from-navy-950/80 via-transparent to-transparent" />
       </div>
 
       <div className="p-4">
-        <h3 className="font-bold text-gray-800 text-lg">{boutique.nom}</h3>
-        <p className="text-gray-500 text-sm mt-1 line-clamp-2">{boutique.description}</p>
+        <h3 className="font-display text-xl text-navy-100">{boutique.nom}</h3>
+        <p className="font-sans text-navy-200/60 text-xs mt-1 line-clamp-2 leading-relaxed">{boutique.description}</p>
 
-        <div className="flex justify-between items-center mt-3">
-          <span className="text-xs text-gray-400">
-            {followersCount} followers
+        <div className="flex justify-between items-center mt-4">
+          <span className="font-sans text-[11px] tracking-wider uppercase text-navy-200/50">
+            {followersCount} follower{followersCount > 1 ? 's' : ''}
           </span>
           <button
             onClick={toggleSuivi}
-            className={`text-xs px-3 py-1 rounded-full font-semibold transition ${
+            className={`text-xs px-4 py-1.5 rounded-full font-sans tracking-wide transition ${
               suivi
-                ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                : 'bg-green-600 text-white hover:bg-green-700'
+                ? 'bg-navy-700 text-navy-100/80 hover:bg-navy-600 border border-navy-600'
+                : 'btn-gold'
             }`}
           >
             {suivi ? 'Suivi' : '+ Suivre'}

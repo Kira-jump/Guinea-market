@@ -11,4 +11,5 @@ root.render(
   </React.StrictMode>
 );
 
-serviceWorkerRegistration.register();
+// Désactivé : un SW resté en cache peut bloquer les calls Supabase (fetch failures)
+serviceWorkerRegistration.unregister();

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { ToastProvider } from './context/ToastContext'
 import Navbar from './components/Navbar'
 import Accueil from './pages/Accueil'
 import Inscription from './pages/Inscription'
@@ -28,6 +29,7 @@ function Layout() {
         <Route path="/inscription" element={<Inscription />} />
         <Route path="/connexion" element={<Connexion />} />
         <Route path="/boutique/:id" element={<Boutique />} />
+        <Route path="/b/:id" element={<Boutique />} />
         <Route path="/creer-boutique" element={<CreerBoutique />} />
         <Route path="/ajouter-produit/:boutiqueId" element={<AjouterProduit />} />
         <Route path="/modifier-produit/:produitId" element={<ModifierProduit />} />
@@ -45,9 +47,11 @@ function Layout() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Layout />
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <Layout />
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
@@ -13,121 +13,112 @@ export default function Profil() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!user) { navigate('/connexion'); return }
-    fetchData()
-  }, [user])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!user) return
     if (profile?.role === 'acheteur') {
       const { data: follows } = await supabase
-        .from('follows')
-        .select('boutique_id')
-        .eq('acheteur_id', user.id)
+        .from('follows').select('boutique_id').eq('acheteur_id', user.id)
 
       if (follows && follows.length > 0) {
         const ids = follows.map(f => f.boutique_id)
-        const { data } = await supabase
-          .from('boutiques')
-          .select('*')
-          .in('id', ids)
+        const { data } = await supabase.from('boutiques').select('*').in('id', ids)
         setBoutiquesFollowees(data || [])
       }
 
       const { data: avisData } = await supabase
-        .from('avis')
-        .select('*, boutiques(nom, logo_url)')
-        .eq('acheteur_id', user.id)
-        .order('created_at', { ascending: false })
+        .from('avis').select('*, boutiques(nom, logo_url)')
+        .eq('acheteur_id', user.id).order('created_at', { ascending: false })
       setMesAvis(avisData || [])
     }
 
     if (profile?.role === 'vendeur') {
       const { data } = await supabase
-        .from('boutiques')
-        .select('*')
-        .eq('vendeur_id', user.id)
-        .maybeSingle()
+        .from('boutiques').select('*').eq('vendeur_id', user.id).maybeSingle()
       setMaBoutique(data)
     }
 
     setLoading(false)
-  }
+  }, [user, profile])
+
+  useEffect(() => {
+    if (!user) { navigate('/connexion'); return }
+    fetchData()
+  }, [user, navigate, fetchData])
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center text-gray-400">
-      <p>Chargement...</p>
+    <div className="min-h-screen flex items-center justify-center text-navy-200/60 font-display italic">
+      Chargement…
     </div>
   )
 
   const photoProfile = profile?.role === 'vendeur' && maBoutique?.logo_url
-    ? maBoutique.logo_url
-    : null
+    ? maBoutique.logo_url : null
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-navy-950">
       {/* Header profil */}
-      <div className="bg-green-600 text-white py-8 px-4">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center mx-auto mb-3 border-4 border-white shadow-lg overflow-hidden">
+      <div className="relative overflow-hidden border-b border-gold-500/15">
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-32 w-96 h-96 rounded-full bg-gold-500/10 blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-3xl mx-auto px-4 py-10 text-center">
+          <div className="w-24 h-24 rounded-full bg-navy-800 flex items-center justify-center mx-auto mb-4 border-2 border-gold-500/50 shadow-gold-glow overflow-hidden">
             {photoProfile ? (
               <img src={photoProfile} alt={profile?.nom} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full bg-green-200 flex items-center justify-center">
-                <span className="text-green-600 font-bold text-2xl">
-                  {profile?.nom?.charAt(0).toUpperCase()}
-                </span>
-              </div>
+              <span className="text-gold-shine font-display text-3xl font-bold">
+                {profile?.nom?.charAt(0).toUpperCase()}
+              </span>
             )}
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold">{profile?.nom}</h1>
-          <p className="text-green-100 text-sm mt-1">{user?.email}</p>
-          <div className="mt-2">
+          <h1 className="font-display text-3xl sm:text-4xl text-navy-100">{profile?.nom}</h1>
+          <p className="text-navy-200/70 text-sm mt-1 font-sans">{user?.email}</p>
+          <div className="mt-3">
             {profile?.role === 'vendeur'
-              ? <span className="bg-orange-400 text-white text-xs px-3 py-1 rounded-full font-semibold">Vendeur</span>
-              : <span className="bg-blue-400 text-white text-xs px-3 py-1 rounded-full font-semibold">Acheteur</span>
+              ? <span className="font-sans text-[10px] tracking-widest uppercase px-3 py-1 rounded-full border border-gold-500/40 text-gold-300 bg-gold-900/30">Vendeur</span>
+              : <span className="font-sans text-[10px] tracking-widest uppercase px-3 py-1 rounded-full border border-emerald-500/40 text-emerald-300 bg-emerald-900/30">Acheteur</span>
             }
           </div>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 py-4 grid grid-cols-3 gap-4 text-center">
+      <div className="glass-navy border-b border-gold-500/10">
+        <div className="max-w-3xl mx-auto px-4 py-5 grid grid-cols-3 gap-4 text-center">
           {profile?.role === 'acheteur' ? (
             <>
               <div>
-                <p className="text-xl font-bold text-green-600">{boutiquesFollowees.length}</p>
-                <p className="text-xs text-gray-400">Suivis</p>
+                <p className="font-display text-2xl text-gold-shine font-semibold">{boutiquesFollowees.length}</p>
+                <p className="text-[10px] tracking-widest uppercase text-navy-200/60 mt-1 font-sans">Suivis</p>
               </div>
               <div>
-                <p className="text-xl font-bold text-green-600">{mesAvis.length}</p>
-                <p className="text-xs text-gray-400">Avis</p>
+                <p className="font-display text-2xl text-gold-shine font-semibold">{mesAvis.length}</p>
+                <p className="text-[10px] tracking-widest uppercase text-navy-200/60 mt-1 font-sans">Avis</p>
               </div>
               <div>
-                <p className="text-xl font-bold text-green-600">
+                <p className="font-display text-2xl text-gold-shine font-semibold">
                   {mesAvis.length > 0
                     ? (mesAvis.reduce((acc, a) => acc + a.note, 0) / mesAvis.length).toFixed(1)
                     : '-'}
                 </p>
-                <p className="text-xs text-gray-400">Note moy.</p>
+                <p className="text-[10px] tracking-widest uppercase text-navy-200/60 mt-1 font-sans">Note moy.</p>
               </div>
             </>
           ) : (
             <>
               <div>
-                <p className="text-xl font-bold text-green-600">{maBoutique?.followers_count || 0}</p>
-                <p className="text-xs text-gray-400">Followers</p>
+                <p className="font-display text-2xl text-gold-shine font-semibold">{maBoutique?.followers_count || 0}</p>
+                <p className="text-[10px] tracking-widest uppercase text-navy-200/60 mt-1 font-sans">Followers</p>
               </div>
               <div>
-                <p className="text-xl font-bold text-green-600">{maBoutique ? 1 : 0}</p>
-                <p className="text-xs text-gray-400">Boutique</p>
+                <p className="font-display text-2xl text-gold-shine font-semibold">{maBoutique ? 1 : 0}</p>
+                <p className="text-[10px] tracking-widest uppercase text-navy-200/60 mt-1 font-sans">Boutique</p>
               </div>
               <div>
-                <p className="text-xl font-bold text-green-600">
+                <p className="font-display text-base text-gold-shine font-semibold">
                   {new Date(user?.created_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
                 </p>
-                <p className="text-xs text-gray-400">Membre depuis</p>
+                <p className="text-[10px] tracking-widest uppercase text-navy-200/60 mt-1 font-sans">Depuis</p>
               </div>
             </>
           )}
@@ -135,12 +126,12 @@ export default function Profil() {
       </div>
 
       {/* Onglets */}
-      <div className="bg-white shadow-sm sticky top-0 z-10 mt-1">
-        <div className="max-w-2xl mx-auto px-4 flex">
+      <div className="glass-navy border-b border-gold-500/10 sticky top-[73px] z-30">
+        <div className="max-w-3xl mx-auto px-4 flex">
           <button
             onClick={() => setOnglet('infos')}
-            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-all ${
-              onglet === 'infos' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-400'
+            className={`flex-1 py-4 text-sm font-sans tracking-wider uppercase border-b-2 transition-all ${
+              onglet === 'infos' ? 'border-gold-500 text-gold-300' : 'border-transparent text-navy-200/60 hover:text-navy-100'
             }`}
           >
             Infos
@@ -149,16 +140,16 @@ export default function Profil() {
             <>
               <button
                 onClick={() => setOnglet('suivis')}
-                className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-all ${
-                  onglet === 'suivis' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-400'
+                className={`flex-1 py-4 text-sm font-sans tracking-wider uppercase border-b-2 transition-all ${
+                  onglet === 'suivis' ? 'border-gold-500 text-gold-300' : 'border-transparent text-navy-200/60 hover:text-navy-100'
                 }`}
               >
-                Boutiques suivies
+                Suivies
               </button>
               <button
                 onClick={() => setOnglet('avis')}
-                className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-all ${
-                  onglet === 'avis' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-400'
+                className={`flex-1 py-4 text-sm font-sans tracking-wider uppercase border-b-2 transition-all ${
+                  onglet === 'avis' ? 'border-gold-500 text-gold-300' : 'border-transparent text-navy-200/60 hover:text-navy-100'
                 }`}
               >
                 Mes avis
@@ -168,8 +159,8 @@ export default function Profil() {
           {profile?.role === 'vendeur' && (
             <button
               onClick={() => setOnglet('boutique')}
-              className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-all ${
-                onglet === 'boutique' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-400'
+              className={`flex-1 py-4 text-sm font-sans tracking-wider uppercase border-b-2 transition-all ${
+                onglet === 'boutique' ? 'border-gold-500 text-gold-300' : 'border-transparent text-navy-200/60 hover:text-navy-100'
               }`}
             >
               Ma boutique
@@ -178,26 +169,25 @@ export default function Profil() {
         </div>
       </div>
 
-      {/* Contenu */}
-      <div className="max-w-2xl mx-auto px-4 py-6">
+      <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Infos */}
         {onglet === 'infos' && (
-          <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+          <div className="glass-navy border border-gold-500/15 rounded-3xl p-6 sm:p-8 space-y-5">
             <div>
-              <p className="text-xs text-gray-400 mb-1">Nom complet</p>
-              <p className="font-semibold text-gray-800">{profile?.nom}</p>
+              <p className="text-[10px] tracking-widest uppercase text-navy-200/60 mb-1 font-sans">Nom complet</p>
+              <p className="font-display text-xl text-navy-100">{profile?.nom}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 mb-1">Email</p>
-              <p className="font-semibold text-gray-800">{user?.email}</p>
+              <p className="text-[10px] tracking-widest uppercase text-navy-200/60 mb-1 font-sans">Email</p>
+              <p className="font-sans text-navy-100">{user?.email}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 mb-1">Rôle</p>
-              <p className="font-semibold text-gray-800 capitalize">{profile?.role}</p>
+              <p className="text-[10px] tracking-widest uppercase text-navy-200/60 mb-1 font-sans">Rôle</p>
+              <p className="font-sans text-navy-100 capitalize">{profile?.role}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 mb-1">Membre depuis</p>
-              <p className="font-semibold text-gray-800">
+              <p className="text-[10px] tracking-widest uppercase text-navy-200/60 mb-1 font-sans">Membre depuis</p>
+              <p className="font-sans text-navy-100">
                 {new Date(user?.created_at).toLocaleDateString('fr-FR', {
                   day: 'numeric', month: 'long', year: 'numeric'
                 })}
@@ -207,7 +197,7 @@ export default function Profil() {
             {profile?.role === 'vendeur' && maBoutique && (
               <button
                 onClick={() => navigate(`/boutique/${maBoutique.id}`)}
-                className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition"
+                className="btn-gold w-full py-3 rounded-full text-sm tracking-wide"
               >
                 Voir ma boutique
               </button>
@@ -215,7 +205,7 @@ export default function Profil() {
             {profile?.role === 'vendeur' && !maBoutique && (
               <button
                 onClick={() => navigate('/creer-boutique')}
-                className="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
+                className="btn-emerald w-full py-3 rounded-full text-sm tracking-wide"
               >
                 Créer ma boutique
               </button>
@@ -226,17 +216,14 @@ export default function Profil() {
         {/* Boutiques suivies */}
         {onglet === 'suivis' && (
           boutiquesFollowees.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">
-              <p>Tu ne suis aucune boutique</p>
-              <button
-                onClick={() => navigate('/')}
-                className="mt-4 bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 transition text-sm"
-              >
+            <div className="text-center py-20 text-navy-200/60">
+              <p className="font-display text-xl italic mb-3">Tu ne suis aucune boutique</p>
+              <button onClick={() => navigate('/')} className="btn-gold px-7 py-3 rounded-full text-sm">
                 Découvrir des boutiques
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {boutiquesFollowees.map(boutique => (
                 <CarteBoutique key={boutique.id} boutique={boutique} userId={user?.id} />
               ))}
@@ -247,8 +234,8 @@ export default function Profil() {
         {/* Mes avis */}
         {onglet === 'avis' && (
           mesAvis.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">
-              <p>Tu n'as laissé aucun avis</p>
+            <div className="text-center py-20 text-navy-200/60 font-display italic">
+              Tu n'as laissé aucun avis
             </div>
           ) : (
             <div className="space-y-3">
@@ -256,31 +243,27 @@ export default function Profil() {
                 <div
                   key={a.id}
                   onClick={() => navigate(`/boutique/${a.boutique_id}`)}
-                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition"
+                  className="bg-navy-800/50 border border-navy-700 rounded-2xl p-4 cursor-pointer hover:border-gold-500/40 transition"
                 >
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-full bg-green-50 overflow-hidden flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-navy-900 overflow-hidden flex-shrink-0 border border-gold-500/30">
                       {a.boutiques?.logo_url ? (
                         <img src={a.boutiques.logo_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-green-200" />
-                      )}
+                      ) : <div className="w-full h-full bg-navy-700" />}
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-800 text-sm">{a.boutiques?.nom}</p>
+                      <p className="font-display text-lg text-navy-100">{a.boutiques?.nom}</p>
                       <div className="flex gap-0.5">
                         {[1,2,3,4,5].map(i => (
-                          <span key={i} className={`text-sm ${i <= a.note ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
+                          <span key={i} className={`text-sm ${i <= a.note ? 'text-gold-shine' : 'text-navy-600'}`}>★</span>
                         ))}
                       </div>
                     </div>
-                    <span className="ml-auto text-xs text-gray-400">
+                    <span className="ml-auto text-xs text-navy-200/50 font-sans">
                       {new Date(a.created_at).toLocaleDateString('fr-FR')}
                     </span>
                   </div>
-                  {a.commentaire && (
-                    <p className="text-gray-600 text-sm">{a.commentaire}</p>
-                  )}
+                  {a.commentaire && <p className="text-navy-200/80 text-sm font-sans">{a.commentaire}</p>}
                 </div>
               ))}
             </div>
@@ -290,14 +273,13 @@ export default function Profil() {
         {/* Ma boutique vendeur */}
         {onglet === 'boutique' && (
           maBoutique ? (
-            <CarteBoutique boutique={maBoutique} userId={user?.id} />
+            <div className="max-w-sm mx-auto">
+              <CarteBoutique boutique={maBoutique} userId={user?.id} />
+            </div>
           ) : (
-            <div className="text-center py-16 text-gray-400">
-              <p>Tu n'as pas encore de boutique</p>
-              <button
-                onClick={() => navigate('/creer-boutique')}
-                className="mt-4 bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 transition text-sm"
-              >
+            <div className="text-center py-20 text-navy-200/60">
+              <p className="font-display text-xl italic mb-3">Tu n'as pas encore de boutique</p>
+              <button onClick={() => navigate('/creer-boutique')} className="btn-gold px-7 py-3 rounded-full text-sm">
                 Créer ma boutique
               </button>
             </div>

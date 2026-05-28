@@ -19,7 +19,7 @@ export default function BoutonCommander({ whatsapp, nomProduit, prix }) {
   return (
     <button
       onClick={handleClick}
-      className="block w-full bg-green-600 text-white text-xs text-center py-2 rounded-lg hover:bg-green-700 transition font-semibold"
+      className="btn-emerald block w-full text-xs text-center py-2.5 rounded-lg font-sans"
     >
       Commander
     </button>

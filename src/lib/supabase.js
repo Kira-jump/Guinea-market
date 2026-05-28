@@ -9,5 +9,6 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storageKey: 'guineeshop-auth',
+    lock: async (_name, _acquireTimeout, fn) => await fn(),
   }
 })

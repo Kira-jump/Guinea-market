@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
@@ -16,11 +16,8 @@ export default function CreerBoutique() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (user) fetchMaBoutique()
-  }, [user])
-
-  const fetchMaBoutique = async () => {
+  const fetchMaBoutique = useCallback(async () => {
+    if (!user) return
     const { data } = await supabase
       .from('boutiques')
       .select('*')
@@ -33,7 +30,11 @@ export default function CreerBoutique() {
       setWhatsapp(data.whatsapp || '')
     }
     setCheckDone(true)
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (user) fetchMaBoutique()
+  }, [user, fetchMaBoutique])
 
   const handleLogo = (e) => {
     const file = e.target.files[0]
@@ -54,8 +55,7 @@ export default function CreerBoutique() {
       const ext = logo.name.split('.').pop()
       const fileName = `logos/${user.id}-${Date.now()}.${ext}`
       const { error: uploadError } = await supabase.storage
-        .from('images')
-        .upload(fileName, logo)
+        .from('images').upload(fileName, logo)
 
       if (uploadError) {
         setErreur(`Erreur upload: ${uploadError.message}`)
@@ -63,9 +63,7 @@ export default function CreerBoutique() {
         return
       }
 
-      const { data: urlData } = supabase.storage
-        .from('images')
-        .getPublicUrl(fileName)
+      const { data: urlData } = supabase.storage.from('images').getPublicUrl(fileName)
       logo_url = urlData.publicUrl
     }
 
@@ -78,8 +76,7 @@ export default function CreerBoutique() {
     } else {
       const { data, error } = await supabase.from('boutiques')
         .insert({ vendeur_id: user.id, nom, description, whatsapp, logo_url })
-        .select()
-        .single()
+        .select().single()
 
       if (error) {
         setErreur(`Erreur: ${error.message}`)
@@ -94,90 +91,93 @@ export default function CreerBoutique() {
   }
 
   if (!checkDone && user) return (
-    <div className="min-h-screen flex items-center justify-center text-gray-400">
-      <p>Chargement...</p>
+    <div className="min-h-screen flex items-center justify-center text-navy-200/60 font-display italic">
+      Chargement…
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4">
-      <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-lg p-6 sm:p-8">
-        <h1 className="text-xl sm:text-2xl font-bold text-green-600 mb-1">
-          {boutique ? 'Modifier ma boutique' : 'Créer ma boutique'}
+    <div className="min-h-screen bg-navy-950 py-10 px-4">
+      <div className="max-w-lg mx-auto glass-navy border border-gold-500/20 rounded-3xl p-7 sm:p-9 shadow-card-dark">
+        <p className="font-sans text-[10px] tracking-[0.4em] uppercase text-gold-400/80 mb-2 text-center">
+          · Espace vendeur ·
+        </p>
+        <h1 className="font-display text-3xl sm:text-4xl text-gold-shine mb-1 text-center">
+          {boutique ? 'Ma boutique' : 'Créer ma boutique'}
         </h1>
-        <p className="text-gray-500 text-sm mb-6">
-          {boutique ? 'Mets à jour les infos de ta boutique' : 'Configure ta boutique en quelques secondes'}
+        <p className="text-navy-200/70 font-display italic text-sm mb-7 text-center">
+          {boutique ? 'Modifie les infos de ta boutique' : 'Configure ta boutique en quelques secondes'}
         </p>
 
         {erreur && (
-          <p className="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm">{erreur}</p>
+          <p className="bg-red-900/30 border border-red-500/30 text-red-300 p-3 rounded-lg mb-4 text-sm">{erreur}</p>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Logo */}
           <div className="flex flex-col items-center gap-3">
-            <div className="w-24 h-24 rounded-full bg-green-50 flex items-center justify-center overflow-hidden border-2 border-green-200">
+            <div className="w-28 h-28 rounded-full bg-navy-800 flex items-center justify-center overflow-hidden border-2 border-gold-500/40 shadow-gold-glow">
               {preview || boutique?.logo_url ? (
                 <img src={preview || boutique?.logo_url} alt="logo" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-gray-400 text-sm">Logo</span>
+                <span className="text-navy-200/50 text-xs font-sans">Logo</span>
               )}
             </div>
-            <label className="cursor-pointer bg-green-50 text-green-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition">
+            <label className="cursor-pointer bg-navy-800 border border-gold-500/30 text-gold-300 px-5 py-2 rounded-full text-sm font-sans hover:bg-navy-700 hover:border-gold-500/60 transition">
               Choisir un logo
               <input type="file" accept="image/*" onChange={handleLogo} className="hidden" />
             </label>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nom de la boutique</label>
+            <label className="block text-xs tracking-wider uppercase text-navy-200/70 mb-2 font-sans">Nom de la boutique</label>
             <input
               type="text"
               value={nom}
               onChange={(e) => setNom(e.target.value)}
               placeholder="Ex: Mode Conakry"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm sm:text-base"
+              className="input-dark w-full rounded-lg px-4 py-3 font-sans text-sm"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-xs tracking-wider uppercase text-navy-200/70 mb-2 font-sans">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Décris ce que tu vends..."
+              placeholder="Décris ce que tu vends…"
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm sm:text-base"
+              className="input-dark w-full rounded-lg px-4 py-3 font-sans text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Numéro WhatsApp</label>
+            <label className="block text-xs tracking-wider uppercase text-navy-200/70 mb-2 font-sans">Numéro WhatsApp</label>
             <input
               type="text"
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
               placeholder="Ex: 224621000000"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm sm:text-base"
+              className="input-dark w-full rounded-lg px-4 py-3 font-sans text-sm"
               required
             />
-            <p className="text-xs text-gray-400 mt-1">Format international sans + (224XXXXXXXXX)</p>
+            <p className="text-xs text-navy-200/50 mt-1 font-sans">Format international sans + (224XXXXXXXXX)</p>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition disabled:opacity-50 text-sm sm:text-base"
+            className="btn-gold w-full py-3 rounded-full text-sm tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Enregistrement...' : boutique ? 'Mettre à jour' : 'Créer ma boutique'}
+            {loading ? 'Enregistrement…' : boutique ? 'Mettre à jour' : 'Créer ma boutique'}
           </button>
         </form>
 
         {boutique && (
           <button
             onClick={() => navigate(`/ajouter-produit/${boutique.id}`)}
-            className="w-full mt-3 bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition text-sm sm:text-base"
+            className="btn-emerald w-full mt-3 py-3 rounded-full text-sm tracking-wide"
           >
             + Ajouter des produits
           </button>

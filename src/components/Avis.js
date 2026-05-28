@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
@@ -11,7 +11,7 @@ function Etoiles({ note, onClick, interactive = false }) {
           type="button"
           onClick={() => onClick && onClick(i)}
           className={`text-xl ${interactive ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-default'} ${
-            i <= note ? 'text-yellow-400' : 'text-gray-200'
+            i <= note ? 'text-gold-shine' : 'text-navy-600'
           }`}
         >
           ★
@@ -30,11 +30,7 @@ export default function Avis({ boutiqueId, vendeurId }) {
   const [afficherFormulaire, setAfficherFormulaire] = useState(false)
   const { user, profile } = useAuth()
 
-  useEffect(() => {
-    fetchAvis()
-  }, [boutiqueId])
-
-  const fetchAvis = async () => {
+  const fetchAvis = useCallback(async () => {
     const { data } = await supabase
       .from('avis')
       .select('*, profiles(nom)')
@@ -50,7 +46,11 @@ export default function Avis({ boutiqueId, vendeurId }) {
         setCommentaire(monAvisData.commentaire || '')
       }
     }
-  }
+  }, [boutiqueId, user])
+
+  useEffect(() => {
+    fetchAvis()
+  }, [fetchAvis])
 
   const moyenneNote = avis.length > 0
     ? (avis.reduce((acc, a) => acc + a.note, 0) / avis.length).toFixed(1)
@@ -62,9 +62,7 @@ export default function Avis({ boutiqueId, vendeurId }) {
     setLoading(true)
 
     if (monAvis) {
-      await supabase.from('avis')
-        .update({ note, commentaire })
-        .eq('id', monAvis.id)
+      await supabase.from('avis').update({ note, commentaire }).eq('id', monAvis.id)
     } else {
       await supabase.from('avis').insert({
         boutique_id: boutiqueId,
@@ -73,7 +71,6 @@ export default function Avis({ boutiqueId, vendeurId }) {
         commentaire
       })
 
-      // Notifier le vendeur
       if (vendeurId && vendeurId !== user.id) {
         await supabase.from('notifications').insert({
           user_id: vendeurId,
@@ -100,56 +97,59 @@ export default function Avis({ boutiqueId, vendeurId }) {
 
   return (
     <div className="mt-2">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg sm:text-xl font-bold text-gray-700">⭐ Avis ({avis.length})</h2>
+      <div className="flex items-center justify-between mb-6 border-b border-navy-700 pb-4">
+        <div>
+          <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-gold-400/70 mb-1">Témoignages</p>
+          <h2 className="font-display text-2xl sm:text-3xl text-navy-100">Avis ({avis.length})</h2>
+        </div>
         {avis.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-yellow-500">{moyenneNote}</span>
+          <div className="flex items-center gap-3">
+            <span className="font-display text-4xl text-gold-shine font-semibold">{moyenneNote}</span>
             <div>
               <Etoiles note={Math.round(moyenneNote)} />
-              <p className="text-xs text-gray-400">{avis.length} avis</p>
+              <p className="text-xs text-navy-200/60 mt-1 font-sans">{avis.length} avis</p>
             </div>
           </div>
         )}
       </div>
 
       {user && profile?.role === 'acheteur' && (
-        <div className="mb-4">
+        <div className="mb-6">
           {!afficherFormulaire ? (
             <button
               onClick={() => setAfficherFormulaire(true)}
-              className="w-full border-2 border-dashed border-green-200 text-green-600 py-3 rounded-xl text-sm font-medium hover:bg-green-50 transition"
+              className="w-full border-2 border-dashed border-gold-500/30 text-gold-300 py-4 rounded-2xl text-sm font-sans hover:bg-gold-500/5 transition"
             >
               {monAvis ? '✏️ Modifier mon avis' : '⭐ Laisser un avis'}
             </button>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-green-50 rounded-xl p-4 space-y-3">
+            <form onSubmit={handleSubmit} className="bg-navy-800/60 border border-gold-500/20 rounded-2xl p-5 space-y-4">
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Ta note</p>
+                <p className="text-sm font-sans text-navy-100 mb-2">Ta note</p>
                 <Etoiles note={note} onClick={setNote} interactive={true} />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-1">Commentaire</p>
+                <p className="text-sm font-sans text-navy-100 mb-1">Commentaire</p>
                 <textarea
                   value={commentaire}
                   onChange={(e) => setCommentaire(e.target.value)}
-                  placeholder="Partage ton expérience..."
+                  placeholder="Partage ton expérience…"
                   rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                  className="input-dark w-full rounded-lg px-3 py-2 text-sm font-sans"
                 />
               </div>
               <div className="flex gap-2">
                 <button
                   type="submit"
                   disabled={loading || note === 0}
-                  className="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition disabled:opacity-50"
+                  className="btn-emerald flex-1 py-2.5 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Envoi...' : monAvis ? 'Mettre à jour' : 'Publier'}
+                  {loading ? 'Envoi…' : monAvis ? 'Mettre à jour' : 'Publier'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setAfficherFormulaire(false)}
-                  className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition"
+                  className="px-4 py-2.5 bg-navy-700 text-navy-100 rounded-lg text-sm hover:bg-navy-600 transition font-sans"
                 >
                   Annuler
                 </button>
@@ -157,7 +157,7 @@ export default function Avis({ boutiqueId, vendeurId }) {
                   <button
                     type="button"
                     onClick={handleSupprimer}
-                    className="px-4 py-2 bg-red-100 text-red-600 rounded-lg text-sm hover:bg-red-200 transition"
+                    className="px-4 py-2.5 bg-red-900/40 text-red-300 rounded-lg text-sm hover:bg-red-900/60 transition border border-red-500/30"
                   >
                     🗑️
                   </button>
@@ -169,30 +169,30 @@ export default function Avis({ boutiqueId, vendeurId }) {
       )}
 
       {avis.length === 0 ? (
-        <div className="text-center py-10 text-gray-400">
+        <div className="text-center py-12 text-navy-200/50">
           <p className="text-3xl mb-2">⭐</p>
-          <p className="text-sm">Aucun avis pour l'instant</p>
+          <p className="font-display italic">Aucun avis pour l'instant</p>
         </div>
       ) : (
         <div className="space-y-3">
           {avis.map(a => (
-            <div key={a.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div key={a.id} className="bg-navy-800/50 border border-navy-700 rounded-2xl p-4 hover:border-gold-500/20 transition">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="font-semibold text-gray-800 text-sm">
+                  <p className="font-sans text-navy-100 text-sm">
                     👤 {a.profiles?.nom || 'Anonyme'}
                     {a.acheteur_id === user?.id && (
-                      <span className="ml-2 text-xs text-green-600">(moi)</span>
+                      <span className="ml-2 text-[10px] tracking-wider uppercase text-gold-400">(moi)</span>
                     )}
                   </p>
                   <Etoiles note={a.note} />
                 </div>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-navy-200/50 font-sans">
                   {new Date(a.created_at).toLocaleDateString('fr-FR')}
                 </span>
               </div>
               {a.commentaire && (
-                <p className="text-gray-600 text-sm mt-2">{a.commentaire}</p>
+                <p className="text-navy-200/80 text-sm mt-2 font-sans leading-relaxed">{a.commentaire}</p>
               )}
             </div>
           ))}
