@@ -1,12 +1,7 @@
--- =====================================================================
--- Couche 1 : Identité
--- Table profiles + énum vendor_status + RLS + trigger auto-création
--- =====================================================================
-
--- 1. Énum pour le statut vendeur
+-- Enum statut vendeur
 create type vendor_status as enum ('none', 'pending', 'approved', 'suspended');
 
--- 2. Table profiles (1:1 avec auth.users)
+-- Table profiles liee a auth.users
 create table public.profiles (
   id              uuid primary key references auth.users(id) on delete cascade,
   prenom          text,
@@ -22,9 +17,10 @@ create table public.profiles (
   updated_at      timestamptz not null default now()
 );
 
+-- Index sur le statut vendeur
 create index profiles_vendor_status_idx on public.profiles(vendor_status);
 
--- 3. Helper : l'utilisateur courant est-il admin ?
+-- Helper admin
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -38,7 +34,7 @@ as $$
   );
 $$;
 
--- 4. Trigger : auto-création du profile à l'inscription
+-- Trigger creation auto du profile a inscription
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -61,7 +57,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- 5. Trigger : updated_at auto
+-- Trigger updated_at auto
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -76,23 +72,20 @@ create trigger profiles_set_updated_at
   before update on public.profiles
   for each row execute function public.set_updated_at();
 
--- =====================================================================
--- RLS Policies
--- =====================================================================
-
+-- Activation RLS
 alter table public.profiles enable row level security;
 
--- SELECT : l'utilisateur lit son propre profil, l'admin lit tout
+-- SELECT propre profil
 create policy "profiles_select_own"
   on public.profiles for select
   using (auth.uid() = id);
 
+-- SELECT admin tous profils
 create policy "profiles_select_admin"
   on public.profiles for select
   using (public.is_admin());
 
--- UPDATE : l'utilisateur met à jour son propre profil
--- (mais NE PEUT PAS modifier is_admin ni vendor_status — voir fonctions dédiées)
+-- UPDATE propre profil sans toucher is_admin et vendor_status
 create policy "profiles_update_own"
   on public.profiles for update
   using (auth.uid() = id)
@@ -102,24 +95,18 @@ create policy "profiles_update_own"
     and vendor_status = (select vendor_status from public.profiles where id = auth.uid())
   );
 
--- UPDATE admin : peut tout modifier
+-- UPDATE admin total
 create policy "profiles_update_admin"
   on public.profiles for update
   using (public.is_admin())
   with check (public.is_admin());
 
--- DELETE : admin uniquement
+-- DELETE admin seulement
 create policy "profiles_delete_admin"
   on public.profiles for delete
   using (public.is_admin());
 
--- Pas de policy INSERT : géré exclusivement par le trigger handle_new_user
-
--- =====================================================================
--- Fonctions métier : demande vendeur + validation admin
--- =====================================================================
-
--- L'utilisateur demande à devenir vendeur (passe son statut à 'pending')
+-- Fonction demande vendeur
 create or replace function public.request_vendor_access()
 returns void
 language plpgsql
@@ -135,7 +122,7 @@ begin
 end;
 $$;
 
--- L'admin approuve un vendeur
+-- Fonction approbation vendeur par admin
 create or replace function public.approve_vendor(vendor_id uuid)
 returns void
 language plpgsql
@@ -144,7 +131,7 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Accès refusé : admin uniquement';
+    raise exception 'Acces refuse admin uniquement';
   end if;
 
   update public.profiles
@@ -155,7 +142,7 @@ begin
 end;
 $$;
 
--- L'admin suspend un vendeur
+-- Fonction suspension vendeur par admin
 create or replace function public.suspend_vendor(vendor_id uuid)
 returns void
 language plpgsql
@@ -164,7 +151,7 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Accès refusé : admin uniquement';
+    raise exception 'Acces refuse admin uniquement';
   end if;
 
   update public.profiles
