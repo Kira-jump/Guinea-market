@@ -34,7 +34,7 @@ as $$
   );
 $$;
 
--- Trigger creation auto du profile a inscription
+-- Trigger creation auto du profile a inscription (vendor approved par defaut)
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -42,12 +42,14 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, prenom, nom, telephone)
+  insert into public.profiles (id, prenom, nom, telephone, vendor_status, vendor_approved_at)
   values (
     new.id,
     new.raw_user_meta_data->>'prenom',
     new.raw_user_meta_data->>'nom',
-    new.raw_user_meta_data->>'telephone'
+    new.raw_user_meta_data->>'telephone',
+    'approved',
+    now()
   );
   return new;
 end;

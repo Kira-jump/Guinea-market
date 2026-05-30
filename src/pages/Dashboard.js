@@ -45,7 +45,7 @@ export default function Dashboard() {
     setVuesParJour(joursData)
 
     const { count: followersCount } = await supabase
-      .from('follows').select('*', { count: 'exact', head: true })
+      .from('followers').select('*', { count: 'exact', head: true })
       .eq('boutique_id', boutiqueData.id)
 
     const { count: produitsCount } = await supabase
@@ -72,7 +72,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!user) { navigate('/connexion'); return }
-    if (profile && profile.role !== 'vendeur') { navigate('/'); return }
     if (profile) fetchData()
   }, [user, profile, navigate, fetchData])
 

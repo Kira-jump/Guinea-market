@@ -13,7 +13,7 @@ export default function CreerBoutique() {
   const [erreur, setErreur] = useState('')
   const [boutique, setBoutique] = useState(null)
   const [checkDone, setCheckDone] = useState(false)
-  const { user } = useAuth()
+  const { user, refreshBoutique } = useAuth()
   const navigate = useNavigate()
 
   const fetchMaBoutique = useCallback(async () => {
@@ -106,6 +106,7 @@ export default function CreerBoutique() {
         }
 
         setBoutique(data)
+        if (refreshBoutique) await refreshBoutique()
         setLoading(false)
         navigate(`/boutique/${data.id}`)
       }

@@ -15,7 +15,7 @@ export default function Feed() {
   const fetchFeed = useCallback(async () => {
     if (!user) return
     const { data: follows } = await supabase
-      .from('follows').select('boutique_id').eq('acheteur_id', user.id)
+      .from('followers').select('boutique_id').eq('user_id', user.id)
 
     if (!follows || follows.length === 0) {
       setLoading(false)

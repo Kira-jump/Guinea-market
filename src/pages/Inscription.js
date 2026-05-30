@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link, useNavigate } from 'react-router-dom'
-import { creerNotification, TYPES_NOTIF } from '../lib/notifications'
 
 export default function Inscription() {
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
   const [motDePasse, setMotDePasse] = useState('')
-  const [role, setRole] = useState('acheteur')
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState('')
   const navigate = useNavigate()
@@ -15,7 +13,7 @@ export default function Inscription() {
   const traduireErreur = (err) => {
     const msg = err?.message || String(err)
     if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('networkerror')) {
-      return "Connexion au serveur impossible. Vérifie ton internet — si le problème persiste, l'email de confirmation Supabase n'est peut-être pas configuré (désactive-le dans le dashboard ou configure le SMTP)."
+      return "Connexion au serveur impossible. Vérifie ton internet."
     }
     if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('user already')) {
       return "Cet email est déjà utilisé. Connecte-toi à la place."
@@ -40,7 +38,7 @@ export default function Inscription() {
         password: motDePasse,
         options: {
           emailRedirectTo: window.location.origin,
-          data: { nom, role },
+          data: { nom },
         },
       })
 
@@ -56,30 +54,8 @@ export default function Inscription() {
         return
       }
 
-      // Tentative de création du profil (n'empêche pas l'inscription si ça rate)
-      try {
-        await supabase.from('profiles').insert({
-          id: data.user.id, nom, role,
-        })
-      } catch (profileErr) {
-        console.error('Profile insert error:', profileErr)
-      }
-
-      // Notification de bienvenue
-      const messageBienvenue = role === 'vendeur'
-        ? `🎉 Bienvenue ${nom} ! Crée ta première boutique et commence à vendre.`
-        : `🎉 Bienvenue ${nom} ! Découvre les boutiques d'exception de ShopGN.`
-      await creerNotification({
-        user_id: data.user.id,
-        type: TYPES_NOTIF.BIENVENUE,
-        message: messageBienvenue,
-        lien: role === 'vendeur' ? '/creer-boutique' : '/',
-      })
-
       setLoading(false)
-
-      if (role === 'vendeur') navigate('/creer-boutique')
-      else navigate('/')
+      navigate('/')
     } catch (e) {
       setErreur(traduireErreur(e))
       setLoading(false)
@@ -144,36 +120,6 @@ export default function Inscription() {
             />
           </div>
 
-          <div>
-            <label className="block text-xs tracking-wider uppercase text-navy-200/70 mb-2 font-sans">Tu veux :</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setRole('acheteur')}
-                className={`p-4 rounded-xl border-2 text-center transition-all font-sans ${
-                  role === 'acheteur'
-                    ? 'border-gold-500 bg-gold-500/10 text-gold-200'
-                    : 'border-navy-700 text-navy-200/70 hover:border-navy-500'
-                }`}
-              >
-                <div className="text-2xl mb-1">🛒</div>
-                <div className="text-sm">Acheter</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('vendeur')}
-                className={`p-4 rounded-xl border-2 text-center transition-all font-sans ${
-                  role === 'vendeur'
-                    ? 'border-gold-500 bg-gold-500/10 text-gold-200'
-                    : 'border-navy-700 text-navy-200/70 hover:border-navy-500'
-                }`}
-              >
-                <div className="text-2xl mb-1">🏪</div>
-                <div className="text-sm">Vendre</div>
-              </button>
-            </div>
-          </div>
-
           <button
             type="submit"
             disabled={loading}
@@ -182,6 +128,10 @@ export default function Inscription() {
             {loading ? 'Création…' : "Créer mon compte"}
           </button>
         </form>
+
+        <p className="text-center text-xs text-navy-200/50 mt-6 font-sans">
+          Achète librement, et ouvre ta boutique quand tu veux.
+        </p>
 
         <p className="text-center text-sm text-navy-200/70 mt-6 font-sans">
           Déjà un compte ?{' '}

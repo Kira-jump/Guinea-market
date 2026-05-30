@@ -6,7 +6,8 @@ import { useNotificationsRealtime } from '../hooks/useNotificationsRealtime'
 import { ICONES_NOTIF, demanderPermissionPush } from '../lib/notifications'
 
 export default function Navbar() {
-  const { user, profile } = useAuth()
+  const { user, profile, boutique } = useAuth()
+  const hasBoutique = !!boutique
   const navigate = useNavigate()
   const [menuOuvert, setMenuOuvert] = useState(false)
   const [dropdownOuvert, setDropdownOuvert] = useState(false)
@@ -49,9 +50,9 @@ export default function Navbar() {
     else navigate('/notifications')
   }
 
-  const badgeRole = profile?.role === 'vendeur'
+  const badgeRole = hasBoutique
     ? <span className="font-sans text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-full border border-gold-500/40 text-gold-300 bg-gold-900/30">Vendeur</span>
-    : <span className="font-sans text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-full border border-emerald-500/40 text-emerald-300 bg-emerald-900/30">Acheteur</span>
+    : null
 
   const navLink = "font-sans text-sm text-navy-100/80 hover:text-gold-300 transition tracking-wide"
 
@@ -141,14 +142,16 @@ export default function Navbar() {
           {user ? (
             <>
               <Link to="/" className={navLink}>Accueil</Link>
-              {profile?.role === 'acheteur' && (
-                <Link to="/feed" className={navLink}>Feed</Link>
-              )}
-              {profile?.role === 'vendeur' && (
+              <Link to="/feed" className={navLink}>Feed</Link>
+              {hasBoutique ? (
                 <>
                   <Link to="/creer-boutique" className={navLink}>Ma boutique</Link>
                   <Link to="/dashboard" className={navLink}>Dashboard</Link>
                 </>
+              ) : (
+                <Link to="/creer-boutique" className="font-sans text-sm text-gold-300 hover:text-gold-200 transition tracking-wide flex items-center gap-1">
+                  🏪 Créer ma boutique
+                </Link>
               )}
               <BellDropdown />
               <Link to="/profil" className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-navy-600 hover:border-gold-500/50 transition">
@@ -195,14 +198,16 @@ export default function Navbar() {
                 {badgeRole}
               </div>
               <Link to="/" onClick={() => setMenuOuvert(false)} className={navLink + " py-1"}>Accueil</Link>
-              {profile?.role === 'acheteur' && (
-                <Link to="/feed" onClick={() => setMenuOuvert(false)} className={navLink + " py-1"}>Feed</Link>
-              )}
-              {profile?.role === 'vendeur' && (
+              <Link to="/feed" onClick={() => setMenuOuvert(false)} className={navLink + " py-1"}>Feed</Link>
+              {hasBoutique ? (
                 <>
                   <Link to="/creer-boutique" onClick={() => setMenuOuvert(false)} className={navLink + " py-1"}>Ma boutique</Link>
                   <Link to="/dashboard" onClick={() => setMenuOuvert(false)} className={navLink + " py-1"}>Dashboard</Link>
                 </>
+              ) : (
+                <Link to="/creer-boutique" onClick={() => setMenuOuvert(false)} className="font-sans text-sm text-gold-300 py-1 flex items-center gap-1">
+                  🏪 Créer ma boutique
+                </Link>
               )}
               <Link to="/notifications" onClick={() => setMenuOuvert(false)} className={navLink + " py-1"}>
                 Notifications {nonLues > 0 && <span className="ml-1 text-gold-shine">({nonLues})</span>}

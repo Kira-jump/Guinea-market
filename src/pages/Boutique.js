@@ -21,10 +21,7 @@ export default function Boutique() {
     const { data } = await supabase.from('boutiques').select('*').eq('id', id).single()
     setBoutique(data)
     setLoading(false)
-    if (data) {
-      await supabase.from('vues').insert({ boutique_id: id, visiteur_id: user?.id || null })
-    }
-  }, [id, user])
+  }, [id])
 
   const fetchProduits = useCallback(async () => {
     const { data } = await supabase
@@ -36,8 +33,8 @@ export default function Boutique() {
   const verifierSuivi = useCallback(async () => {
     if (!user) return
     const { data } = await supabase
-      .from('follows').select('id')
-      .eq('acheteur_id', user.id).eq('boutique_id', id)
+      .from('followers').select('user_id')
+      .eq('user_id', user.id).eq('boutique_id', id)
       .maybeSingle()
     setSuivi(!!data)
   }, [user, id])
@@ -51,18 +48,12 @@ export default function Boutique() {
   const toggleSuivi = async () => {
     if (!user) { navigate('/connexion'); return }
     if (suivi) {
-      await supabase.from('follows')
-        .delete().eq('acheteur_id', user.id).eq('boutique_id', id)
+      await supabase.from('followers')
+        .delete().eq('user_id', user.id).eq('boutique_id', id)
       setBoutique({ ...boutique, followers_count: boutique.followers_count - 1 })
     } else {
-      await supabase.from('follows').insert({ acheteur_id: user.id, boutique_id: id })
+      await supabase.from('followers').insert({ user_id: user.id, boutique_id: id })
       setBoutique({ ...boutique, followers_count: boutique.followers_count + 1 })
-      await supabase.from('notifications').insert({
-        user_id: boutique.vendeur_id,
-        type: 'follow',
-        message: `Quelqu'un a commencé à suivre ta boutique "${boutique.nom}" !`,
-        lien: `/dashboard`
-      })
     }
     setSuivi(!suivi)
   }
