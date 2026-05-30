@@ -49,44 +49,70 @@ export default function CreerBoutique() {
     setLoading(true)
     setErreur('')
 
-    let logo_url = boutique?.logo_url || null
-
-    if (logo) {
-      const ext = logo.name.split('.').pop()
-      const fileName = `logos/${user.id}-${Date.now()}.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('images').upload(fileName, logo)
-
-      if (uploadError) {
-        setErreur(`Erreur upload: ${uploadError.message}`)
+    try {
+      if (!user) {
+        setErreur('Session expiree, reconnecte-toi.')
         setLoading(false)
         return
       }
 
-      const { data: urlData } = supabase.storage.from('images').getPublicUrl(fileName)
-      logo_url = urlData.publicUrl
-    }
+      let logo_url = boutique?.logo_url || null
 
-    if (boutique) {
-      await supabase.from('boutiques')
-        .update({ nom, description, whatsapp, logo_url })
-        .eq('id', boutique.id)
-      setLoading(false)
-      navigate(`/boutique/${boutique.id}`)
-    } else {
-      const { data, error } = await supabase.from('boutiques')
-        .insert({ vendeur_id: user.id, nom, description, whatsapp, logo_url })
-        .select().single()
+      if (logo) {
+        const ext = logo.name.split('.').pop()
+        const fileName = `logos/${user.id}-${Date.now()}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('images').upload(fileName, logo)
 
-      if (error) {
-        setErreur(`Erreur: ${error.message}`)
-        setLoading(false)
-        return
+        if (uploadError) {
+          console.error('Upload error:', uploadError)
+          setErreur(`Erreur upload: ${uploadError.message}`)
+          setLoading(false)
+          return
+        }
+
+        const { data: urlData } = supabase.storage.from('images').getPublicUrl(fileName)
+        logo_url = urlData?.publicUrl || null
       }
 
-      setBoutique(data)
+      if (boutique) {
+        const { error } = await supabase.from('boutiques')
+          .update({ nom, description, whatsapp, logo_url })
+          .eq('id', boutique.id)
+        if (error) {
+          console.error('Update boutique error:', error)
+          setErreur(`Erreur: ${error.message}`)
+          setLoading(false)
+          return
+        }
+        setLoading(false)
+        navigate(`/boutique/${boutique.id}`)
+      } else {
+        const { data, error } = await supabase.from('boutiques')
+          .insert({ vendeur_id: user.id, nom, description, whatsapp, logo_url })
+          .select().single()
+
+        if (error) {
+          console.error('Insert boutique error:', error)
+          setErreur(`Erreur: ${error.message}`)
+          setLoading(false)
+          return
+        }
+        if (!data) {
+          console.error('Insert boutique: data null sans erreur')
+          setErreur('Creation OK mais reponse vide. Rafraichis la page.')
+          setLoading(false)
+          return
+        }
+
+        setBoutique(data)
+        setLoading(false)
+        navigate(`/boutique/${data.id}`)
+      }
+    } catch (err) {
+      console.error('handleSubmit crash:', err)
+      setErreur(`Erreur inattendue: ${err?.message || err}`)
       setLoading(false)
-      navigate(`/boutique/${data.id}`)
     }
   }
 
