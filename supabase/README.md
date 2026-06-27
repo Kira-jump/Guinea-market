@@ -7,6 +7,7 @@ Migrations SQL versionnées, à exécuter dans l'ordre dans le **SQL Editor** de
 | # | Fichier | Couche | Description |
 |---|---------|--------|-------------|
 | 1 | `migrations/001_profiles.sql` | Identité | Table `profiles` + statuts vendeur + RLS + fonctions admin |
+| 2 | `migrations/002_catalogue.sql` | Catalogue | Tables `boutiques`, `produits`, `followers` + RLS + epinglage admin |
 
 ## Comment appliquer une migration
 

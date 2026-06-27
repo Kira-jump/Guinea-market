@@ -17,11 +17,10 @@
   }
 
   ::selection {
-    background: rgba(217, 173, 51, 0.35);
-    color: #fbf6e7;
+    background: rgba(160, 160, 160, 0.35);
+    color: #f0f0f0;
   }
 
-  /* scrollbar discret style premium */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -40,7 +39,7 @@
 
 @layer components {
   .text-gold-shine {
-    background: linear-gradient(135deg, #f6ecc4 0%, #d9ad33 45%, #a87c20 100%);
+    background: linear-gradient(135deg, #f0f0f0 0%, #a0a0a0 45%, #636363 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -48,7 +47,7 @@
   }
 
   .border-hairline {
-    border: 1px solid rgba(217, 173, 51, 0.18);
+    border: 1px solid rgba(160, 160, 160, 0.18);
   }
 
   .glass-navy {
@@ -58,7 +57,7 @@
   }
 
   .btn-gold {
-    background: linear-gradient(135deg, #e5c357 0%, #d9ad33 50%, #a87c20 100%);
+    background: linear-gradient(135deg, #d9d9d9 0%, #a0a0a0 50%, #636363 100%);
     color: #070d1c;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -66,7 +65,7 @@
   }
   .btn-gold:hover {
     filter: brightness(1.08);
-    box-shadow: 0 0 28px -8px rgba(217, 173, 51, 0.6);
+    box-shadow: 0 0 28px -8px rgba(160, 160, 160, 0.6);
   }
 
   .btn-emerald {
@@ -88,8 +87,8 @@
   }
   .input-dark:focus {
     outline: none;
-    border-color: #d9ad33;
-    box-shadow: 0 0 0 3px rgba(217, 173, 51, 0.15);
+    border-color: #a0a0a0;
+    box-shadow: 0 0 0 3px rgba(160, 160, 160, 0.15);
   }
   .input-dark::placeholder {
     color: rgba(91, 106, 163, 0.7);
