@@ -32,7 +32,7 @@ module.exports = {
       fontFamily: {
         display: ['"Cormorant Garamond"', 'serif'],
         sans: ['Jost', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        arabic: ['Amiri',', 'serif'],
+        arabic: ['Amiri', 'serif'],
       },
       boxShadow: {
         'gold-glow': '0 0 24px -6px rgba(160, 160, 160, 0.45)',
